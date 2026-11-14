@@ -15,7 +15,7 @@ class ArtikelController extends Controller
      * Daftar artikel, dengan pencarian dan filter kategori.
      * Query string: ?q=kata&kategori=ID
      */
-    public function index(Request $request): View
+   public function index(Request $request)
     {
         $q = trim((string) $request->query('q', ''));
         $kategoriId = $request->integer('kategori') ?: null;
@@ -33,7 +33,15 @@ class ArtikelController extends Controller
             ->paginate(9)
             ->withQueryString();
 
-        // Kategori yang punya minimal satu artikel terbit, beserta jumlahnya
+        // 🌟 JIKA DIAKSES DARI POSTMAN / API, KIRIM DALAM BENTUK JSON 🌟
+        if ($request->is('api/*') || $request->expectsJson()) {
+            return response()->json([
+                'status' => 'success',
+                'data' => $artikels
+            ]);
+        }
+
+        // Kalau diakses dari web biasa, tetap tampilkan view HTML
         $daftarKategori = KategoriArtikel::query()
             ->whereHas('artikel', fn ($query) => $query->terbit())
             ->withCount(['artikel' => fn ($query) => $query->terbit()])
@@ -46,10 +54,6 @@ class ArtikelController extends Controller
 
         return view('artikel.index', compact('artikels', 'daftarKategori', 'kategoriAktif', 'q'));
     }
-
-    /**
-     * Baca satu artikel, plus artikel terkait dari kategori yang sama.
-     */
     public function show(Artikel $artikel): View
     {
         $this->pastikanSudahTerbit($artikel);
