@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 class PembayaranController extends Controller
 {
     /**
-     * Pasien konfirmasi "Saya sudah bayar".
+     * Pasien konfirmasi "Saya sudah bayar" untuk web.
      */
     public function konfirmasi(Request $request, Konsultasi $konsultasi)
     {
@@ -35,20 +35,13 @@ class PembayaranController extends Controller
 
         toast('Konfirmasi pembayaran berhasil! Sesi konselingmu siap dijalankan.', 'success');
 
-        if ($request->wantsJson()) {
-            return response()->json([
-                'success'  => true,
-                'redirect' => route('konsultasi.konfirmasi', $konsultasi),
-            ]);
-        }
-
         return redirect()
             ->route('konsultasi.konfirmasi', $konsultasi)
             ->with('success', 'Pembayaran berhasil dikonfirmasi.');
     }
 
     /**
-     * (Opsional) Admin/sistem menandai pembayaran gagal.
+     * Menandai pembayaran gagal untuk web.
      */
     public function gagal(Request $request, Konsultasi $konsultasi)
     {

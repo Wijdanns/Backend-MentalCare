@@ -38,12 +38,12 @@ class KonsultasiController extends Controller
             'id_jadwal'         => ['required', 'exists:jadwal_psikolog,id'],
             'metode_pembayaran' => ['required', 'in:Transfer Bank,E-Wallet'],
         ], [
-            'id_psikolog.required'       => 'Pilih psikolog terlebih dahulu.',
-            'id_psikolog.exists'         => 'Psikolog yang dipilih tidak valid.',
-            'id_jadwal.required'         => 'Pilih jadwal konsultasi terlebih dahulu.',
-            'id_jadwal.exists'           => 'Jadwal yang dipilih tidak valid.',
+            'id_psikolog.required'      => 'Pilih psikolog terlebih dahulu.',
+            'id_psikolog.exists'        => 'Psikolog yang dipilih tidak valid.',
+            'id_jadwal.required'        => 'Pilih jadwal konsultasi terlebih dahulu.',
+            'id_jadwal.exists'          => 'Jadwal yang dipilih tidak valid.',
             'metode_pembayaran.required' => 'Pilih metode pembayaran terlebih dahulu.',
-            'metode_pembayaran.in'       => 'Metode pembayaran tidak valid.',
+            'metode_pembayaran.in'      => 'Metode pembayaran tidak valid.',
         ]);
 
         $psikolog = Psikolog::findOrFail($data['id_psikolog']);
@@ -71,14 +71,6 @@ class KonsultasiController extends Controller
         });
 
         toast('Pemesanan berhasil! Silakan selesaikan pembayaran agar sesi konselingmu bisa segera dikonfirmasi.', 'success');
-
-        if ($request->wantsJson()) {
-            return response()->json([
-                'success'  => true,
-                'id'       => $konsultasi->id,
-                'redirect' => route('konsultasi.konfirmasi', $konsultasi),
-            ]);
-        }
 
         return redirect()
             ->route('konsultasi.konfirmasi', $konsultasi)
@@ -158,7 +150,6 @@ class KonsultasiController extends Controller
         return view('konsultasi.riwayat', compact('konsultasi'));
     }
 
-    // EXPORT: unduh riwayat konsultasi 
     public function exportExcel()
     {
         return Excel::download(

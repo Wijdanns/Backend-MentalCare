@@ -12,10 +12,9 @@ use Illuminate\View\View;
 class ArtikelController extends Controller
 {
     /**
-     * Daftar artikel, dengan pencarian dan filter kategori.
-     * Query string: ?q=kata&kategori=ID
+     * Daftar artikel untuk web, dengan pencarian dan filter kategori.
      */
-   public function index(Request $request)
+    public function index(Request $request): View
     {
         $q = trim((string) $request->query('q', ''));
         $kategoriId = $request->integer('kategori') ?: null;
@@ -33,15 +32,6 @@ class ArtikelController extends Controller
             ->paginate(9)
             ->withQueryString();
 
-        // 🌟 JIKA DIAKSES DARI POSTMAN / API, KIRIM DALAM BENTUK JSON 🌟
-        if ($request->is('api/*') || $request->expectsJson()) {
-            return response()->json([
-                'status' => 'success',
-                'data' => $artikels
-            ]);
-        }
-
-        // Kalau diakses dari web biasa, tetap tampilkan view HTML
         $daftarKategori = KategoriArtikel::query()
             ->whereHas('artikel', fn ($query) => $query->terbit())
             ->withCount(['artikel' => fn ($query) => $query->terbit()])
@@ -54,6 +44,7 @@ class ArtikelController extends Controller
 
         return view('artikel.index', compact('artikels', 'daftarKategori', 'kategoriAktif', 'q'));
     }
+
     public function show(Artikel $artikel): View
     {
         $this->pastikanSudahTerbit($artikel);
@@ -81,7 +72,6 @@ class ArtikelController extends Controller
 
         $artikel->load(['kategori', 'user']);
 
-        // Thumbnail disisipkan sebagai data base64 supaya pasti tampil di PDF
         $thumbnail = null;
         if ($artikel->thumbnail) {
             $path = storage_path('app/public/artikel/' . basename($artikel->thumbnail));
@@ -99,9 +89,6 @@ class ArtikelController extends Controller
         return $pdf->download($namaFile);
     }
 
-    /**
-     * Artikel yang belum waktunya terbit dianggap tidak ada (dipakai show() dan unduh()).
-     */
     private function pastikanSudahTerbit(Artikel $artikel): void
     {
         abort_if($artikel->tanggal_publikasi->isFuture() && ! $artikel->tanggal_publikasi->isToday(), 404);
