@@ -3,8 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\KonsultasiResource;
+use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 class ProfilApiController extends Controller
@@ -12,10 +13,10 @@ class ProfilApiController extends Controller
     /**
      * Menampilkan data profil user beserta riwayat konsultasi dan tes (format JSON).
      */
-    public function index()
+     public function index(Request $request)
     {
         /** @var \App\Models\User $user */
-        $user = Auth::user();
+        $user = $request->user();
 
         $riwayatKonsultasi = $user->konsultasi()
             ->with(['psikolog', 'jadwal', 'pembayaran'])
@@ -28,13 +29,13 @@ class ProfilApiController extends Controller
             ->get();
 
         return response()->json([
-            'status' => 'success',
+            'status'  => 'success',
             'message' => 'Data Profil Berhasil Diambil',
-            'data' => [
-                'user' => $user,
-                'riwayat_konsultasi' => $riwayatKonsultasi,
-                'riwayat_tes' => $riwayatTes,
-            ]
+            'data'    => [
+                'user'               => new UserResource($user),
+                'riwayat_konsultasi' => KonsultasiResource::collection($riwayatKonsultasi),
+                'riwayat_tes'        => $riwayatTes,
+            ],
         ], 200);
     }
 
@@ -44,7 +45,7 @@ class ProfilApiController extends Controller
     public function update(Request $request)
     {
         /** @var \App\Models\User $user */
-        $user = Auth::user();
+        $user = $request->user();
 
         $request->validate([
             'nama'   => 'required|string|max:255',
@@ -63,9 +64,9 @@ class ProfilApiController extends Controller
         $user->update($data);
 
         return response()->json([
-            'status' => 'success',
+            'status'  => 'success',
             'message' => 'Profil berhasil diperbarui!',
-            'data' => $user
+            'data'    => new UserResource($user->fresh()),
         ], 200);
     }
 }
