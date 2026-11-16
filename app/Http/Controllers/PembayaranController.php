@@ -6,48 +6,46 @@ use App\Models\Konsultasi;
 use App\Models\Pembayaran;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class PembayaranController extends Controller
 {
     /**
-     * Pasien konfirmasi "Saya sudah bayar" untuk web.
+     * Pasien konfirmasi "Saya sudah bayar".
+     * Tidak lagi menandai Berhasil — verifikasi hanya oleh admin (Filament).
      */
     public function konfirmasi(Request $request, Konsultasi $konsultasi)
     {
         abort_unless((int) $konsultasi->id_user === (int) Auth::id(), 403);
 
-        DB::transaction(function () use ($konsultasi) {
-            $pembayaran = Pembayaran::firstOrCreate(
-                ['id_konsultasi' => $konsultasi->id],
-                ['status_pembayaran' => 'Pending']
-            );
+        $konsultasi->load('pembayaran');
 
-            $pembayaran->update([
-                'status_pembayaran' => 'Berhasil',
-                'waktu_pembayaran'  => now(),
-            ]);
+        if ($konsultasi->status_konsultasi !== 'Menunggu Pembayaran') {
+            return back()->with('error', 'Konsultasi ini tidak dapat dikonfirmasi lagi.');
+        }
 
-            $konsultasi->update([
-                'status_konsultasi' => 'Dikonfirmasi',
-            ]);
-        });
+        if (blank($konsultasi->pembayaran?->bukti_pembayaran)) {
+            return back()->with('error', 'Unggah bukti pembayaran terlebih dahulu.');
+        }
 
-        toast('Konfirmasi pembayaran berhasil! Sesi konselingmu siap dijalankan.', 'success');
+        toast('Bukti pembayaran diterima. Mohon tunggu verifikasi dari admin.', 'info');
 
         return redirect()
             ->route('konsultasi.konfirmasi', $konsultasi)
-            ->with('success', 'Pembayaran berhasil dikonfirmasi.');
+            ->with('success', 'Bukti pembayaran diterima, menunggu verifikasi admin.');
     }
 
-    /**
-     * Menandai pembayaran gagal untuk web.
-     */
+    /** Menandai pembayaran gagal — hanya selama belum diverifikasi admin. */
     public function gagal(Request $request, Konsultasi $konsultasi)
     {
         abort_unless((int) $konsultasi->id_user === (int) Auth::id(), 403);
 
         $pembayaran = Pembayaran::where('id_konsultasi', $konsultasi->id)->firstOrFail();
+
+        if ($konsultasi->status_konsultasi !== 'Menunggu Pembayaran'
+            || $pembayaran->status_pembayaran === 'Berhasil') {
+            return back()->with('error', 'Pembayaran ini sudah diproses dan tidak dapat ditandai gagal.');
+        }
+
         $pembayaran->update(['status_pembayaran' => 'Gagal']);
 
         toast('Pembayaran gagal dikonfirmasi. Yuk, periksa kembali transaksimu dan coba lagi.', 'error');
