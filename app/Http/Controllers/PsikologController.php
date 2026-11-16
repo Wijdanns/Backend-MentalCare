@@ -9,8 +9,7 @@ use Illuminate\View\View;
 class PsikologController extends Controller
 {
     /**
-     * Daftar psikolog, dengan pencarian dan filter.
-     * Query string: ?q=nama&spesialis=...&tersedia=1
+     * Daftar psikolog untuk web, dengan pencarian dan filter.
      */
     public function index(Request $request): View
     {
@@ -25,7 +24,7 @@ class PsikologController extends Controller
             }))
             ->when($spesialis !== '', fn ($query) => $query->where('spesialis', $spesialis))
             ->when($request->boolean('tersedia'), fn ($query) => $query->has('jadwalTersedia'))
-            ->orderByDesc('tersedia') // yang punya jadwal tampil lebih dulu
+            ->orderByDesc('tersedia')
             ->orderBy('nama')
             ->paginate(9)
             ->withQueryString();
@@ -40,13 +39,12 @@ class PsikologController extends Controller
     }
 
     /**
-     * Detail satu psikolog beserta jadwal yang masih tersedia.
+     * Detail satu psikolog beserta jadwal yang masih tersedia untuk web.
      */
     public function show(Psikolog $psikolog): View
     {
         $psikolog->loadExists('jadwalTersedia as tersedia');
 
-        // Dikelompokkan per tanggal: ['2026-10-14' => [slot, slot], ...]
         $jadwalPerTanggal = $psikolog->jadwalTersedia()
             ->get()
             ->groupBy(fn ($jadwal) => $jadwal->tanggal->toDateString());
