@@ -3,9 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class AuthApiController extends Controller
 {
@@ -15,39 +16,39 @@ class AuthApiController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'email' => ['required', 'email'],
+            'email'    => ['required', 'email'],
             'password' => ['required'],
         ], [
-            'email.required' => 'Email wajib diisi.',
-            'email.email' => 'Format email tidak valid.',
+            'email.required'    => 'Email wajib diisi.',
+            'email.email'       => 'Format email tidak valid.',
             'password.required' => 'Kata sandi wajib diisi.',
         ]);
 
-        // Email tidak terdaftar
-        if (! User::where('email', $credentials['email'])->exists()) {
+        $user = User::where('email', $credentials['email'])->first();
+
+        if (! $user) {
             return response()->json([
-                'status' => 'error',
-                'message' => 'Email salah.'
+                'status'  => 'error',
+                'message' => 'Email salah.',
             ], 422);
         }
 
-        // Email ada, password salah
-        if (! Auth::attempt($credentials)) {
+        if (! Hash::check($credentials['password'], $user->password)) {
             return response()->json([
-                'status' => 'error',
-                'message' => 'Kata sandi salah.'
+                'status'  => 'error',
+                'message' => 'Kata sandi salah.',
             ], 422);
         }
-
-        $user = Auth::user();
 
         return response()->json([
-            'status' => 'success',
+            'status'  => 'success',
             'message' => 'Berhasil masuk! Mari lanjutkan langkah kecil untuk kesehatan mentalmu hari ini.',
-            'data' => [
-                'user' => $user,
-                'role' => $user->role
-            ]
+            'data'    => [
+                'user'       => new UserResource($user),
+                'role'       => $user->role,
+                'token'      => $user->createToken('api')->plainTextToken,
+                'token_type' => 'Bearer',
+            ],
         ], 200);
     }
 
@@ -57,27 +58,27 @@ class AuthApiController extends Controller
     public function register(Request $request)
     {
         $data = $request->validate([
-            'nama' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'nama'     => ['required', 'string', 'max:255'],
+            'email'    => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
         ]);
 
         $user = User::create([
-            'nama' => $data['nama'],
-            'email' => $data['email'],
+            'nama'     => $data['nama'],
+            'email'    => $data['email'],
             'password' => $data['password'],
-            'role' => 'pasien',
+            'role'     => 'pasien',
         ]);
 
-        Auth::login($user);
-
         return response()->json([
-            'status' => 'success',
+            'status'  => 'success',
             'message' => 'Pendaftaran berhasil! Langkah awal yang baik untuk perjalanan kesehatan mentalmu.',
-            'data' => [
-                'user' => $user,
-                'role' => $user->role
-            ]
+            'data'    => [
+                'user'       => new UserResource($user),
+                'role'       => $user->role,
+                'token'      => $user->createToken('api')->plainTextToken,
+                'token_type' => 'Bearer',
+            ],
         ], 201);
     }
 
@@ -86,16 +87,11 @@ class AuthApiController extends Controller
      */
     public function logout(Request $request)
     {
-        Auth::logout();
-
-        if ($request->hasSession()) {
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-        }
+        $request->user()->currentAccessToken()->delete();
 
         return response()->json([
-            'status' => 'success',
-            'message' => 'Sesi diakhiri. Sampai jumpa lagi, semoga harimu menyenangkan!'
+            'status'  => 'success',
+            'message' => 'Sesi diakhiri. Sampai jumpa lagi, semoga harimu menyenangkan!',
         ], 200);
     }
 }
