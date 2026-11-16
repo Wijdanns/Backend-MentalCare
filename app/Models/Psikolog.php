@@ -10,7 +10,7 @@ class Psikolog extends Model
     protected $table = 'psikolog';
 
     protected $fillable = [
-        'nama', 'email', 'spesialis',
+        'id_user','nama', 'email', 'spesialis',
         'deskripsi_psikolog', 'foto_profil', 'biaya',
     ];
 
@@ -53,5 +53,14 @@ class Psikolog extends Model
         return Attribute::get(fn () => $this->foto_profil
             ? asset('storage/' . $this->foto_profil)
             : asset('images/default-psikolog.svg'));
+    }
+
+    public function user() { return $this->belongsTo(User::class, 'id_user'); }
+
+    protected static function booted(): void
+    {
+        static::saved(function (Psikolog $p) {
+            $p->user?->update(['nama' => $p->nama, 'email' => $p->email]);
+        });
     }
 }

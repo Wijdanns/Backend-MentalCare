@@ -43,7 +43,16 @@ class User extends Authenticatable implements FilamentUser, HasName
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return $this->role === 'admin';
+        return match ($panel->getId()) {
+            'yes'      => $this->role === 'admin',
+            'psikolog' => $this->role === 'psikolog' && $this->psikolog()->exists(),
+            default    => false,
+        };
+    }
+
+    public function psikolog() 
+    { 
+        return $this->hasOne(Psikolog::class, 'id_user'); 
     }
 
     public function hasilTes()
