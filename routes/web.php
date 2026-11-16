@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Konsultasi;
 use App\Http\Controllers\ArtikelController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\HomeController;
@@ -8,6 +9,7 @@ use App\Http\Controllers\TesController;
 use App\Http\Controllers\KonsultasiController;
 use App\Http\Controllers\PembayaranController;
 use App\Http\Controllers\ProfilController;
+use Illuminate\Support\Facades\Schedule;
 use App\Http\Middleware\EnsureRole;
 use Illuminate\Support\Facades\Route;
 
@@ -28,18 +30,14 @@ Route::get('/psikolog/{psikolog}', [PsikologController::class, 'show'])->name('p
 // Foto psikolog dilayani dari storage/app/public/psikolog (tanpa storage:link)
 Route::get('/foto-psikolog/psikolog/{file}', function (string $file) {
     $path = storage_path('app/public/psikolog/' . basename($file));
-
     abort_unless(is_file($path), 404);
-
     return response()->file($path);
 })->name('foto-psikolog');
 
 // Thumbnail artikel dilayani dari storage/app/public/artikel
 Route::get('/foto-psikolog/artikel/{file}', function (string $file) {
     $path = storage_path('app/public/artikel/' . basename($file));
-
     abort_unless(is_file($path), 404);
-
     return response()->file($path);
 })->name('foto-artikel');
 
@@ -55,12 +53,13 @@ Route::get('/konsultasi/go-login', function () {
     session(['url.intended' => route('konsultasi.index')]);
     return redirect()->route('login');
 })->name('konsultasi.go-login');
+Route::get('/konsultasi/export', [KonsultasiController::class, 'exportExcel'])->name('konsultasi.export');
+Schedule::call(function () { Konsultasi::batalkanYangKedaluwarsa(); })->everyMinute();
 
 // ---------- Area pasien (wajib login) ----------
 Route::middleware(['auth', EnsureRole::class . ':pasien'])->group(function () {
 
     Route::prefix('tes-psikologi')->name('tes.')->group(function () {
-        // riwayat & hasil harus di atas /{tes}, kalau tidak "riwayat" dianggap ID tes
         Route::get('/riwayat', [TesController::class, 'riwayat'])->name('riwayat');
         Route::get('/hasil/{hasil}', [TesController::class, 'hasil'])->name('hasil');
         Route::get('/{tes}', [TesController::class, 'show'])->name('show');
@@ -71,7 +70,15 @@ Route::middleware(['auth', EnsureRole::class . ':pasien'])->group(function () {
     Route::get('/profil', [ProfilController::class, 'index'])->name('profil.index');
     Route::put('/profil', [ProfilController::class, 'update'])->name('profil.update');
 
+    Route::get('/konsultasi/riwayat', [KonsultasiController::class, 'riwayat'])->name('konsultasi.riwayat');
     Route::post('/konsultasi', [KonsultasiController::class, 'store'])->name('konsultasi.store');
+    Route::post('/konsultasi/{konsultasi}/bayar', [KonsultasiController::class, 'bayar'])->name('konsultasi.bayar');
     Route::get('/konsultasi/konfirmasi/{konsultasi}', [KonsultasiController::class, 'konfirmasi'])->name('konsultasi.konfirmasi');
     Route::post('/konsultasi/{konsultasi}/pembayaran/konfirmasi', [PembayaranController::class, 'konfirmasi'])->name('pembayaran.konfirmasi');
+
+    Route::get('/bukti-pembayaran/{file}', function (string $file) {
+        $path = storage_path('app/public/bukti_pembayaran/' . basename($file));
+        abort_unless(is_file($path), 404);
+        return response()->file($path);
+    })->middleware('auth')->name('bukti-pembayaran');
 });

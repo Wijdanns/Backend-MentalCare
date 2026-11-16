@@ -13,13 +13,11 @@ class ProfilController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        // Mengambil riwayat konsultasi beserta data psikolog, jadwal, dan pembayarannya
         $riwayatKonsultasi = $user->konsultasi()
             ->with(['psikolog', 'jadwal', 'pembayaran'])
             ->latest()
             ->get();
 
-        // Mengambil riwayat hasil tes beserta detail tes psikologisnya
         $riwayatTes = $user->hasilTes()
             ->with('tesPsikologis')
             ->latest()
@@ -41,7 +39,6 @@ class ProfilController extends Controller
         $data = ['nama' => $request->nama];
 
         if ($request->hasFile('profil')) {
-            // Hapus foto lama jika ada
             if ($user->profil) {
                 Storage::disk('public')->delete($user->profil);
             }

@@ -14,7 +14,7 @@ use Illuminate\View\View;
 class TesController extends Controller
 {
     /**
-     * Daftar tes yang bisa dikerjakan (hanya tes yang sudah punya pertanyaan).
+     * Daftar tes yang bisa dikerjakan untuk web.
      */
     public function index(): View
     {
@@ -28,8 +28,7 @@ class TesController extends Controller
     }
 
     /**
-     * Halaman pengerjaan: semua pertanyaan beserta pilihan jawabannya.
-     * Kolom `poin` sengaja TIDAK dimuat, supaya skor tidak terlihat oleh pasien.
+     * Halaman pengerjaan tes untuk web.
      */
     public function show(TesPsikologis $tes): View|RedirectResponse
     {
@@ -50,8 +49,7 @@ class TesController extends Controller
     }
 
     /**
-     * Simpan jawaban, hitung total poin, lalu arahkan ke halaman hasil.
-     * Input yang diharapkan: jawaban[id_pertanyaan] = id_jawaban
+     * Simpan jawaban tes, hitung total poin, lalu arahkan ke halaman hasil web.
      */
     public function submit(Request $request, TesPsikologis $tes): RedirectResponse
     {
@@ -72,8 +70,6 @@ class TesController extends Controller
         $rows = [];
         $total = 0;
 
-        // Validasi: tiap pertanyaan harus terjawab, dan jawabannya harus
-        // benar-benar milik pertanyaan itu (mencegah data kiriman dipalsukan).
         foreach ($pertanyaan as $i => $p) {
             $jawaban = $p->jawabanPsikologis->firstWhere('id', (int) ($pilihan[$p->id] ?? 0));
 
@@ -86,7 +82,7 @@ class TesController extends Controller
             $rows[] = [
                 'id_pertanyaan' => $p->id,
                 'id_jawaban' => $jawaban->id,
-                'poin' => $jawaban->poin, // salinan poin saat dijawab
+                'poin' => $jawaban->poin,
             ];
             $total += $jawaban->poin;
         }
@@ -109,8 +105,7 @@ class TesController extends Controller
     }
 
     /**
-     * Halaman hasil: total poin dan rincian jawaban.
-     * Pasien hanya boleh melihat hasil miliknya sendiri.
+     * Halaman hasil tes untuk web.
      */
     public function hasil(HasilTes $hasil): View
     {
@@ -122,7 +117,6 @@ class TesController extends Controller
             'jawabanUser.jawabanPsikologis',
         ]);
 
-        // Poin maksimal tes = jumlah poin tertinggi tiap pertanyaan
         $poinMaks = $hasil->tesPsikologis
             ->pertanyaan()
             ->with('jawabanPsikologis')
@@ -133,7 +127,7 @@ class TesController extends Controller
     }
 
     /**
-     * Riwayat tes milik pasien yang sedang login.
+     * Riwayat tes pasien untuk web.
      */
     public function riwayat(): View
     {
