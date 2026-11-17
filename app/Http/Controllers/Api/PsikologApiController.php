@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\JadwalResource;
+use App\Http\Resources\PsikologResource;
 use App\Models\Psikolog;
 use Illuminate\Http\Request;
 
@@ -28,6 +30,8 @@ class PsikologApiController extends Controller
             ->orderBy('nama')
             ->paginate(9);
 
+        $psikologs->through(fn ($p) => (new PsikologResource($p))->resolve());
+
         $daftarSpesialis = Psikolog::query()
             ->select('spesialis')
             ->distinct()
@@ -35,12 +39,12 @@ class PsikologApiController extends Controller
             ->pluck('spesialis');
 
         return response()->json([
-            'status' => 'success',
+            'status'  => 'success',
             'message' => 'List Data Psikolog Berhasil Diambil',
-            'data' => [
-                'psikologs' => $psikologs,
-                'daftar_spesialis' => $daftarSpesialis
-            ]
+            'data'    => [
+                'psikologs'        => $psikologs,
+                'daftar_spesialis' => $daftarSpesialis,
+            ],
         ], 200);
     }
 
@@ -51,25 +55,28 @@ class PsikologApiController extends Controller
     {
         $psikolog = Psikolog::withExists('jadwalTersedia as tersedia')->find($id);
 
-        if (!$psikolog) {
+        if (! $psikolog) {
             return response()->json([
-                'status' => 'error',
-                'message' => 'Psikolog tidak ditemukan'
+                'status'  => 'error',
+                'message' => 'Psikolog tidak ditemukan',
             ], 404);
         }
 
-        // Dikelompokkan per tanggal: ['2026-10-14' => [slot, slot], ...]
+        // ['2026-10-14' => [slot, slot], ...]
         $jadwalPerTanggal = $psikolog->jadwalTersedia()
             ->get()
-            ->groupBy(fn ($jadwal) => $jadwal->tanggal->toDateString());
+            ->groupBy(fn ($jadwal) => $jadwal->tanggal->toDateString())
+            ->map(fn ($grup) => $grup
+                ->map(fn ($j) => (new JadwalResource($j))->resolve())
+                ->values());
 
         return response()->json([
-            'status' => 'success',
+            'status'  => 'success',
             'message' => 'Detail Psikolog Berhasil Diambil',
-            'data' => [
-                'psikolog' => $psikolog,
-                'jadwal_per_tanggal' => $jadwalPerTanggal
-            ]
+            'data'    => [
+                'psikolog'           => new PsikologResource($psikolog),
+                'jadwal_per_tanggal' => $jadwalPerTanggal,
+            ],
         ], 200);
     }
 }

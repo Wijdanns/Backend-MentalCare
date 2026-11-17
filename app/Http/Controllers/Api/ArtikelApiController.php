@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\ArtikelController;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\ArtikelResource;
+use App\Http\Resources\KategoriArtikelResource;
 use App\Models\Artikel;
+use App\Models\KategoriArtikel;
 use Illuminate\Http\Request;
 
 class ArtikelApiController extends Controller
@@ -28,10 +32,13 @@ class ArtikelApiController extends Controller
             ->orderByDesc('id')
             ->paginate(9);
 
+        // through() + resolve() → bentuk paginasi (current_page, data, links, ...) tetap sama seperti sebelumnya
+        $artikels->through(fn ($a) => (new ArtikelResource($a))->resolve());
+
         return response()->json([
-            'status' => 'success',
+            'status'  => 'success',
             'message' => 'List Data Artikel Berhasil Diambil',
-            'data' => $artikels
+            'data'    => $artikels,
         ], 200);
     }
 
@@ -42,17 +49,44 @@ class ArtikelApiController extends Controller
     {
         $artikel = Artikel::with(['kategori', 'user'])->terbit()->find($id);
 
-        if (!$artikel) {
+        if (! $artikel) {
             return response()->json([
-                'status' => 'error',
-                'message' => 'Artikel tidak ditemukan atau belum terbit'
+                'status'  => 'error',
+                'message' => 'Artikel tidak ditemukan atau belum terbit',
             ], 404);
         }
 
         return response()->json([
-            'status' => 'success',
+            'status'  => 'success',
             'message' => 'Detail Artikel Berhasil Diambil',
-            'data' => $artikel
+            'data'    => (new ArtikelResource($artikel))->sertakanIsi(),
         ], 200);
+    }
+
+    /** Daftar kategori untuk dropdown filter (padanan $kategoriArtikel di navbar web). */
+    public function kategori()
+    {
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'List Kategori Artikel Berhasil Diambil',
+            'data'    => KategoriArtikelResource::collection(
+                KategoriArtikel::orderBy('nama_kategori')->get()
+            ),
+        ], 200);
+    }
+
+    /** Unduh artikel sebagai PDF — memakai logika yang sama dengan versi web. */
+    public function unduh($id)
+    {
+        $artikel = Artikel::terbit()->find($id);
+
+        if (! $artikel) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Artikel tidak ditemukan atau belum terbit',
+            ], 404);
+        }
+
+        return app(ArtikelController::class)->unduh($artikel);
     }
 }
