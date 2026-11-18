@@ -69,6 +69,7 @@ Route::middleware(['auth', EnsureRole::class . ':pasien'])->group(function () {
 
     // Tes psikologi (urutan penting: /riwayat & /hasil sebelum /{tes})
     Route::prefix('tes-psikologi')->name('tes.')->group(function () {
+
         Route::get('/riwayat-test', [TesController::class, 'riwayat'])->name('riwayat');
         Route::get('/hasil/{hasil}', [TesController::class, 'hasil'])->name('hasil');
         Route::get('/{tes}', [TesController::class, 'show'])->name('show');
