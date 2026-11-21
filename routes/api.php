@@ -41,6 +41,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/user', fn (Request $request) => response()->json([
         'status' => 'success',
+        'message' => 'Data pengguna berhasil diambil.',
         'data'   => new UserResource($request->user()),
     ]));
 
@@ -75,8 +76,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware(EnsureRole::class . ':psikolog')->prefix('psikolog-saya')->group(function () {
 
         Route::get('/profil', [PsikologSayaApiController::class, 'profil']);
-        Route::post('/profil', [PsikologSayaApiController::class, 'update']); // POST agar bisa upload foto (multipart)
-
+        Route::post('/profil', [PsikologSayaApiController::class, 'update']); 
         Route::get('/jadwal', [PsikologJadwalApiController::class, 'index']);
         Route::post('/jadwal', [PsikologJadwalApiController::class, 'store']);
         Route::put('/jadwal/{id}', [PsikologJadwalApiController::class, 'update']);
